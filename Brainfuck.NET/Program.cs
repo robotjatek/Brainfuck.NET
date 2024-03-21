@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.IO;
 
 namespace Brainfuck.NET
 {
@@ -19,6 +18,16 @@ namespace Brainfuck.NET
 
         static void Main(string[] args)
         {
+            var path = "mandelbrot.bf";
+            if (args.Any())
+                path = args[0];
+
+            if (!File.Exists(path))
+            {
+                Console.WriteLine($"Error! Source file cannot be found: {path}");
+                return;
+            }
+
             var labels = new Stack<Labels>();
 
             var an = new AssemblyName("Brainfuck.NET");
@@ -29,26 +38,15 @@ namespace Brainfuck.NET
             var methodBuilder = tb.DefineMethod("Main", MethodAttributes.Public | MethodAttributes.Static, typeof(int), new Type[] { });
             var gen = methodBuilder.GetILGenerator();
 
-            var dataMethod = tb.DefineMethod("AddToCell", MethodAttributes.Private | MethodAttributes.Static, typeof(void), new Type[] { });
-
-            /*gen.Emit(OpCodes.Ldstr, "Hello world");
-            gen.Emit(OpCodes.Call, typeof(Console).GetMethod("WriteLine", new Type[] { typeof(string) }));
-            gen.Emit(OpCodes.Call, typeof(Console).GetMethod("ReadKey", new Type[] { }));
-            gen.Emit(OpCodes.Pop);
-            gen.Emit(OpCodes.Ldc_I4_0);
-            gen.Emit(OpCodes.Ret);*/
-
-            var p = new Precompiler("mandelbrot.bf");
-            var precompiled = p.Precompiled;
+            // Create an optimised code from the original by merging instructions
+            var precompiled = new Precompiler(path).Precompiled;
 
             var CellBuilder = gen.DeclareLocal(typeof(byte[]));
-            //CellBuilder.SetLocalSymInfo("Cells");
             gen.Emit(OpCodes.Ldc_I4, 30000);
             gen.Emit(OpCodes.Newarr, typeof(byte));
             gen.Emit(OpCodes.Stloc_S, CellBuilder);
 
-            var DataPointerBuilder = gen.DeclareLocal(typeof(int));
-            //DataPointerBuilder.SetLocalSymInfo("DataPointer");
+            var DataPointerBuilder = gen.DeclareLocal(typeof(int));;
             gen.Emit(OpCodes.Ldc_I4_0);
             gen.Emit(OpCodes.Stloc, DataPointerBuilder);
 
@@ -121,10 +119,23 @@ namespace Brainfuck.NET
             gen.Emit(OpCodes.Ldc_I4_0);
             gen.Emit(OpCodes.Ret);
 
-
-            var t = tb.CreateType();
+            tb.CreateType();
             builder.SetEntryPoint(methodBuilder, PEFileKinds.ConsoleApplication);
             builder.Save("BF.exe");
+
+            Console.WriteLine("Compilation successful!");
+            Console.WriteLine("The compiled executable can be found with the name: BF.exe");
+
+            ConsoleKey key;
+            do
+            {
+                Console.WriteLine("Press Enter to run the compiled executable or ESC to quit");
+                key = Console.ReadKey().Key;
+                if (key == ConsoleKey.Enter)
+                    Process.Start("BF.exe");
+            } while (key != ConsoleKey.Enter && key != ConsoleKey.Escape);
+            
+            Console.ReadKey();
         }
     }
 }
