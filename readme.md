@@ -1,6 +1,7 @@
 ﻿# Brainfuck.NET
 
 A simple toy-compiler which translates brainfuck code to IL code. The output is a runnable .exe file.
+Made on a boring afternoon with nothing else to do in a couple of hours.
 
 ## How to use
 
